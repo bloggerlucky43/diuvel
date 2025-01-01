@@ -35,7 +35,7 @@ pool.connect()
     .catch(err => {
         console.error('Database connection error:', err);
     });
-const myApp ='https://5a5e-197-211-63-115.ngrok-free.app';
+const myApp ='https://diuvel-1.onrender.com';
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files from React
