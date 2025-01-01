@@ -35,9 +35,7 @@ pool.connect()
     .catch(err => {
         console.error('Database connection error:', err);
     });
-<<<<<<< HEAD
-const myApp ='https://5a5e-197-211-63-115.ngrok-free.app';
-=======
+
 const myApp ='https://diuvel-2.onrender.com';
 >>>>>>> d7a18d9318dc4f8b337e3f709ce12c73605a466b
 app.use(bodyParser.urlencoded({ extended: true }));
