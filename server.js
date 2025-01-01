@@ -4,7 +4,7 @@ import connectPgSimple from 'connect-pg-simple';
 import pkg from 'pg'; 
 import { Telegraf } from 'telegraf'; 
 import dotenv from 'dotenv';
-import cors from 'cors';
+// import cors from 'cors';
 import session from 'express-session'
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -23,7 +23,7 @@ const pgSession = connectPgSimple(session);
 console.log(process.env.DATABASE_URL);
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL, // Use the environment variable for your connection string
+    connectionString: process.env.DATABASE_URL, // Use the environment variable
     ssl: {
         rejectUnauthorized: false, // Required
     },
@@ -35,13 +35,13 @@ pool.connect()
     .catch(err => {
         console.error('Database connection error:', err);
     });
-const myApp ='https://da91baf404e6aa716d2ae3a4c03fbb8a.serveo.net';
+const myApp ='https://5a5e-197-211-63-115.ngrok-free.app';
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve static files from React
+
 console.log(process.env.NODE_ENV)
 if(process.env.NODE_ENV ==='production'){
-    app.use(express.static(join(__dirname, '/build')));
+    app.use(express.static(join(__dirname, '/dist')));
 }
 
 
@@ -51,9 +51,10 @@ if(process.env.NODE_ENV ==='production'){
 //     credentials: true // If you're sending cookies or authentication headers
 // }));
 app.use(express.json())
+app.use(express.static('public'));
 app.use(session({
     store: new pgSession({
-        pool: pool, // Use your existing PostgreSQL pool
+        pool: pool, // Use your PostgreSQL pool
         tableName: 'session', // Create a table called 'session' to store session data
     }),
     secret: process.env.SECRET_KEY, // Replace with your own secret
@@ -61,20 +62,21 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         maxAge: 1 * 24 * 60 * 60 * 1000,
-        secure: true, // Set to true if using HTTPS
+        secure: true, // Set
         sameSite: 'None',
     }}));
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_API_KEY);
 bot.start((ctx) => {
     console.log('Received start command')
-    // ctx.reply('Hey, Welcome PUPS 🐶 Invite your friend to earn more', {
-    //     reply_markup: {
-    //         inline_keyboard: [
-    //             [{ text: 'Launch', web_app: { url: `${myApp}/startapp` } }],
-    //         ],
-    //     },
-    // });
+    ctx.reply('Hey, Welcome to Diuvel! Tap on the coin and see your balance rise. Diuvel is a Decentralized Exchange on the TON Blockchain. The biggest part of Diuvel Token distribution will occur among the players here. Got friends, relatives, co-workers? Bring them all into the game.More buddies, more coins. Join our telegram community', {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: 'Launch', web_app: { url: `${myApp}/startapp` } }],
+                [{ text: 'Join telegram',  url: "https://t.me/duivelcoin"  }],
+            ],
+        },
+    });
 });
 
 bot.telegram.setWebhook(`${myApp}/bot${process.env.TELEGRAM_BOT_API_KEY}`);
