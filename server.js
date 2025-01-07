@@ -2,9 +2,10 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import connectPgSimple from 'connect-pg-simple';
 import pkg from 'pg'; 
+import cron from 'node-cron';
 import { Telegraf } from 'telegraf'; 
 import dotenv from 'dotenv';
-// import cors from 'cors';
+import cors from 'cors';
 import session from 'express-session'
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -35,13 +36,10 @@ pool.connect()
     .catch(err => {
         console.error('Database connection error:', err);
     });
-<<<<<<< HEAD
-const myApp ='https://5a5e-197-211-63-115.ngrok-free.app';
-=======
-const myApp ='https://diuvel-2.onrender.com';
->>>>>>> d7a18d9318dc4f8b337e3f709ce12c73605a466b
-app.use(bodyParser.urlencoded({ extended: true }));
 
+// const myApp='https://a26b-197-211-63-16.ngrok-free.app';
+const myApp ='https://diuvel-2.onrender.com';
+app.use(bodyParser.urlencoded({ extended: true }));
 
 console.log(process.env.NODE_ENV)
 if(process.env.NODE_ENV ==='production'){
@@ -258,12 +256,12 @@ app.get('/get-balance/:username', async (req, res) => {
     const { username } = req.params;
 
     try {
-        const result = await pool.query('SELECT balance,taplimit FROM users WHERE username = $1', [username]);
+        const result = await pool.query('SELECT balance,taplimit,refill_count,boostcount FROM users WHERE username = $1', [username]);
 
         if (result.rows.length > 0) {
             // User found, return balance
-            res.status(200).json({ balance: result.rows[0].balance , tapLimit: result.rows[0].taplimit});
-            console.log(result.rows[0].taplimit);
+            res.status(200).json({ balance: result.rows[0].balance , tapLimit: result.rows[0].taplimit, refillCount: result.rows[0].refill_count, boostCount: result.rows[0].boostcount});
+            console.log(result.rows[0].refill_count);
             
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -272,6 +270,17 @@ app.get('/get-balance/:username', async (req, res) => {
         console.error('Error fetching balance:', error);
         // Send a server error response in case of a database failure
         res.status(500).json({ message: 'Error fetching balance' });
+    }
+});
+
+// Scheduled task to reset tapLimit to 100 every 24 hours
+cron.schedule('0 12 * * *', async () => {
+    try {
+        // Execute the query to reset the tapLimit
+        const result = await pool.query('UPDATE users SET taplimit = 100');
+        console.log(`TapLimit reset to 100 for all users. Rows affected: ${result.rowCount}`);
+    } catch (error) {
+        console.error('Error resetting tapLimit:', error);
     }
 });
 
@@ -302,6 +311,83 @@ app.post('/update', async (req, res) => {
         console.error('Error updating data:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
+});
+
+cron.schedule('0 12 * * *', async () => {
+    try {
+        // Execute the query to reset the tapLimit
+        const result = await pool.query('UPDATE users SET refill_count =3');
+        console.log(`Refill reset to 3 for all users. Rows affected: ${result.rowCount}`);
+    } catch (error) {
+        console.error('Error resetting refill:', error);
+    }
+});
+
+app.post('/refill', async (req, res) => {
+  const { username, tapLimit, refillCount } = req.body;
+
+  // Validate the input
+  if (!username || tapLimit === undefined || refillCount === undefined) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  try {
+    // Update the user's tapLimit and refillCount in the database
+    const result = await pool.query(
+      'UPDATE users SET taplimit = $1, refill_count = $2 WHERE username = $3',
+      [tapLimit, refillCount, username]
+    );
+
+    if (result.rowCount > 0) {
+      // If the update was successful, respond with success
+      return res.status(200).json({ message: 'Refill successful' });
+    } else {
+      // If no rows were updated, the username might not exist
+      return res.status(404).json({ error: 'User not found' });
+    }
+  } catch (error) {
+    // Handle any database or server errors
+    console.error('Error updating refill:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+cron.schedule('0 12 * * *', async () => {
+    try {
+        // Execute the query to reset the tapLimit
+        const result = await pool.query('UPDATE users SET boostcount =3');
+        console.log(`boost reset to 3 for all users. Rows affected: ${result.rowCount}`);
+    } catch (error) {
+        console.error('Error resetting boost:', error);
+    }
+});
+
+app.post('/boost', async (req, res) => {
+  const { username, boostCount } = req.body;
+  console.log('boostcount is:', boostCount);
+  
+  // Validate the input
+  if (!username || boostCount === undefined) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    // Update the user's boostCount and tapLimit in the database
+    const result = await pool.query(
+      'UPDATE users SET boostcount = $1 WHERE username = $2',
+      [boostCount, username]
+    );
+
+    if (result.rowCount > 0) {
+      // If the update was successful, respond with success
+      return res.status(200).json({ message: 'Boost successful' });
+    } else {
+      // If no rows were updated, the username might not exist
+      return res.status(404).json({ error: 'User not found' });
+    }
+  } catch (error) {
+    // Handle any database or server errors
+    console.error('Error updating boost:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 
@@ -452,7 +538,7 @@ app.post('/api/tasks/complete', async (req, res) => {
             console.error('Transaction failed:', error);
             res.status(500).json({ error: 'Failed to do complete task' });
         } finally {
-            client.release();  // Always release the client back to the pool
+            client.release();  // Always release the client back
         }
     } catch (error) {
         console.error('Error completing task:', error);
@@ -467,3 +553,4 @@ app.get('*', (req, res) => {
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
+
